@@ -66,11 +66,11 @@ async function updateSender(sender, serverId) {
 }
 
 async function handleCommand(msg){
-    if (!msg.member.hasPermission("ADMINISTRATOR")){
-        msg.reply("You are not an admin!")
-        return
-    }
     if(msg.content.startsWith(settings.prefix)){
+        if (!msg.member.hasPermission("ADMINISTRATOR")){
+            msg.reply("You are not an admin!")
+            return
+        }
         let contentArr = msg.content.split(" ")
         if(contentArr[0] === `${settings.prefix}channel`){
             let response = await addServer(contentArr[1], msg.guild.id)

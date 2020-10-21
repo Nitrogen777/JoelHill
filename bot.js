@@ -66,7 +66,7 @@ async function updateSender(sender, serverId) {
 }
 
 async function handleCommand(msg){
-    if (!message.member.hasPermission("ADMINISTRATOR")){
+    if (!msg.member.hasPermission("ADMINISTRATOR")){
         msg.reply("You are not an admin!")
         return
     }

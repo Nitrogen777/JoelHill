@@ -99,9 +99,11 @@ async function handleCommand(msg){
     if(msg.content.startsWith(settings.prefix)){
         if(msg.content === `${settings.prefix}help`){
             msg.channel.send(help)
+            return
         }
         if(msg.content === `${settings.prefix}info`){
             msg.channel.send(await getInfo(msg.guild.id))
+            return
         }
         if (!msg.member.hasPermission("ADMINISTRATOR")){
             msg.reply("You are not an admin!")

@@ -2,6 +2,7 @@ const Discord = require('discord.js');
 const client = new Discord.Client();
 const fs = require('fs');
 const mariadb = require("mariadb");
+const { info } = require('console');
 const settings = JSON.parse(fs.readFileSync('settings.json'))
 const token = settings.token
 const pool = mariadb.createPool({
@@ -9,6 +10,12 @@ const pool = mariadb.createPool({
     password: settings.DBpass,
     database: settings.DBdatabase
 });
+const help = `\`\`\`css\nWelcome to Joel Hill, the counting bot!\nCommands:
+${settings.prefix}help: display this message
+${settings.prefix}info: info about the ongoing counting process
+${settings.prefix}channel: set the server's counting channel (ADMIN ONLY!)
+${settings.prefix}number: set the server's last number (ADMIN ONLY!)
+${settings.prefix}goal: set the server's goal (ADMIN ONLY!)\`\`\``
 
 async function serverExists(serverId) {
     let conn = await pool.getConnection();
@@ -22,6 +29,15 @@ async function getServer(serverId) {
     let content = await conn.query("SELECT * FROM servers WHERE id = ?;", [serverId]);
     conn.end()
     return content[0];
+}
+
+async function getInfo(serverId) {
+    let info = await getServer(serverId)
+    return `\`\`\`
+Counting channel: <#${info.channel}>
+Current Number: ${info.last_number}
+Goal: ${info.goal}
+Numbers left: ${info.goal - info.last_number}\`\`\``
 }
 
 async function addServer(channelId, serverId) {
@@ -56,6 +72,20 @@ async function updateNumber(number, serverId) {
     return `Set the server's counting channel first!`;
 }
 
+async function updateGoal(goal, serverId) {
+    if(!isNumber(goal)){
+        return "Not a number"
+    }
+    let conn = await pool.getConnection();
+    if(await serverExists(serverId)){
+        await conn.query("UPDATE servers SET goal = ? WHERE id = ?", [goal, serverId]);
+        conn.end()
+        return `Set server's goal to ${goal}`;
+    }
+    conn.end()
+    return `Set the server's counting channel first!`;
+}
+
 async function updateSender(sender, serverId) {
     let conn = await pool.getConnection();
     if(await serverExists(serverId)){
@@ -67,6 +97,12 @@ async function updateSender(sender, serverId) {
 
 async function handleCommand(msg){
     if(msg.content.startsWith(settings.prefix)){
+        if(msg.content === `${settings.prefix}help`){
+            msg.channel.send(help)
+        }
+        if(msg.content === `${settings.prefix}info`){
+            msg.channel.send(await getInfo(msg.guild.id))
+        }
         if (!msg.member.hasPermission("ADMINISTRATOR")){
             msg.reply("You are not an admin!")
             return
@@ -77,6 +113,9 @@ async function handleCommand(msg){
             msg.reply(response)
         }else if(contentArr[0] === `${settings.prefix}number`){
             let response = await updateNumber(contentArr[1], msg.guild.id)
+            msg.reply(response)
+        }else if(contentArr[0] === `${settings.prefix}goal`){
+            let response = await updateGoal(contentArr[1], msg.guild.id)
             msg.reply(response)
         }
     }
@@ -105,6 +144,9 @@ client.on('message', async msg => {
                 if(number === (await getServer(msg.guild.id)).last_number + 1){
                     await updateNumber(`${number}`, msg.guild.id)
                     await updateSender(msg.member.id, msg.guild.id)
+                    if(number%100 === 0){
+                        await msg.react('🎉')
+                    }
                 }else{
                     msg.reply("Thats not the correct number!").then(mesg => mesg.delete({timeout: 10000}))
                     await msg.delete()

@@ -148,6 +148,9 @@ client.on('message', async msg => {
                     await updateSender(msg.member.id, msg.guild.id)
                     if(number%100 === 0){
                         await msg.react('🎉')
+                        if(number%1000 === 0){
+                            await msg.react('⭐')
+                        }
                     }
                 }else{
                     msg.reply("Thats not the correct number!").then(mesg => mesg.delete({timeout: 10000}))

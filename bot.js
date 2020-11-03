@@ -53,7 +53,7 @@ async function addServer(channelId, serverId) {
         conn.end()
         return `Set server's counting channel to ${channel.toString()}`;
     }
-    await conn.query("INSERT INTO servers VALUES(?,?,?,?,?);", [serverId, channelId, 0, 100, null]);
+    await conn.query("INSERT INTO servers VALUES(?,?,?,?,?,?);", [serverId, channelId, 0, 100, null, null]);
     conn.end()
     return `Set server's counting channel to ${channel.toString()}`;
 }
@@ -90,6 +90,15 @@ async function updateSender(sender, serverId) {
     let conn = await pool.getConnection();
     if(await serverExists(serverId)){
         await conn.query("UPDATE servers SET last_sender = ? WHERE id = ?", [sender, serverId]);
+        conn.end()
+    }
+    conn.end()
+}
+
+async function updateMessage(message, serverId) {
+    let conn = await pool.getConnection();
+    if(await serverExists(serverId)){
+        await conn.query("UPDATE servers SET last_message = ? WHERE id = ?", [message, serverId]);
         conn.end()
     }
     conn.end()
@@ -146,6 +155,7 @@ client.on('message', async msg => {
                 if(number === (await getServer(msg.guild.id)).last_number + 1){
                     await updateNumber(`${number}`, msg.guild.id)
                     await updateSender(msg.member.id, msg.guild.id)
+                    await updateMessage(msg.id, msg.guild.id)
                     if(number%100 === 0){
                         await msg.react('🎉')
                         if(number%1000 === 0){
@@ -174,7 +184,7 @@ client.on('messageDelete', async msg => {
         if(msg.channel.id === (await getServer(msg.guild.id)).channel){
             if(isNumber(msg.content)){
                 let number = parseInt(msg.content.split(" ")[0])
-                if(number === (await getServer(msg.guild.id)).last_number){
+                if(msg.id === (await getServer(msg.guild.id)).last_message){
                     msg.channel.send(`${number}`)
                 }
             }

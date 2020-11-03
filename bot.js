@@ -167,4 +167,18 @@ client.on('message', async msg => {
         await handleCommand(msg)
     }
 })
+
+client.on('messageDelete', async msg => {
+    if(msg.author.bot) return;
+    if(await serverExists(msg.guild.id)){
+        if(msg.channel.id === (await getServer(msg.guild.id)).channel){
+            if(isNumber(msg.content)){
+                let number = parseInt(msg.content.split(" ")[0])
+                if(number === (await getServer(msg.guild.id)).last_number){
+                    msg.channel.send(`${number}`)
+                }
+            }
+        }
+    }
+})
 client.login(token);

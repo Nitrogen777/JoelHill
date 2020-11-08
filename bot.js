@@ -144,23 +144,27 @@ client.on('ready', () => {
 client.on('message', async msg => {
     if(msg.author.bot) return;
     if(await serverExists(msg.guild.id)){
-        if(msg.channel.id === (await getServer(msg.guild.id)).channel){
+        let serverInfo = await getServer(msg.guild.id)
+        if(msg.channel.id === serverInfo.channel){
             if(isNumber(msg.content)){
-                if(msg.member.id === (await getServer(msg.guild.id)).last_sender){
+                if(msg.member.id === serverInfo.last_sender){
                     msg.reply("You can't send a number twice in a row!").then(mesg => mesg.delete({timeout: 10000}))
                     await msg.delete()
                     return
                 }
                 let number = parseInt(msg.content.split(" ")[0])
-                if(number === (await getServer(msg.guild.id)).last_number + 1){
+                if(number === serverInfo.last_number + 1){
                     await updateNumber(`${number}`, msg.guild.id)
                     await updateSender(msg.member.id, msg.guild.id)
                     await updateMessage(msg.id, msg.guild.id)
-                    if(number%100 === 0){
+                    if(number%100 === 0 || number === serverInfo.goal){
                         await msg.react('🎉')
-                        if(number%1000 === 0){
+                        if(number%1000 === 0 || number === serverInfo.goal){
                             await msg.react('⭐')
                         }
+                    }
+                    if(number === serverInfo.goal){
+                        msg.channel.send("Goal reached!")
                     }
                 }else{
                     msg.reply("Thats not the correct number!").then(mesg => mesg.delete({timeout: 10000}))

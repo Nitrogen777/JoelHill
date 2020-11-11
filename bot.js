@@ -111,7 +111,7 @@ function updateNumber(number, serverId) {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (!isNumber(number)) {
+                    if (!isNumber(number.toString())) {
                         return [2 /*return*/, "Not a number"];
                     }
                     return [4 /*yield*/, pool.getConnection()];
@@ -137,7 +137,7 @@ function updateGoal(goal, serverId) {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (!isNumber(goal)) {
+                    if (!isNumber(goal.toString())) {
                         return [2 /*return*/, "Not a number"];
                     }
                     return [4 /*yield*/, pool.getConnection()];
@@ -229,7 +229,7 @@ function handleCommand(msg) {
                     return [3 /*break*/, 6];
                 case 2:
                     if (!(contentArr[0] === settings.prefix + "number")) return [3 /*break*/, 4];
-                    return [4 /*yield*/, updateNumber(contentArr[1], msg.guild.id)];
+                    return [4 /*yield*/, updateNumber(parseInt(contentArr[1]), msg.guild.id)];
                 case 3:
                     response = _a.sent();
                     msg.reply(response);
@@ -276,7 +276,7 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 if (!serverExists(msg.guild.id)) return [3 /*break*/, 18];
                 serverInfo = serverDictionary[msg.guild.id];
                 if (!(msg.channel.id === serverInfo.channel)) return [3 /*break*/, 15];
-                if (!isNumber(msg.content)) return [3 /*break*/, 12];
+                if (!isNumber(msg.content.toString())) return [3 /*break*/, 12];
                 if (!(msg.member.id === serverInfo.last_sender)) return [3 /*break*/, 2];
                 msg.reply("You can't send a number twice in a row!").then(function (mesg) { return mesg["delete"]({ timeout: 10000 }); });
                 return [4 /*yield*/, msg["delete"]()];
@@ -286,7 +286,7 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
             case 2:
                 number = parseInt(msg.content.split(" ")[0]);
                 if (!(number === serverInfo.last_number + 1)) return [3 /*break*/, 9];
-                return [4 /*yield*/, updateNumber("" + number, msg.guild.id)];
+                return [4 /*yield*/, updateNumber(number, msg.guild.id)];
             case 3:
                 _a.sent();
                 return [4 /*yield*/, updateSender(msg.member.id, msg.guild.id)];
@@ -344,7 +344,7 @@ client.on('messageDelete', function (msg) { return __awaiter(void 0, void 0, voi
         if (serverExists(msg.guild.id)) {
             serverInfo = serverDictionary[msg.guild.id];
             if (msg.channel.id === serverInfo.channel) {
-                if (isNumber(msg.content)) {
+                if (isNumber(msg.content.toString())) {
                     number = parseInt(msg.content.split(" ")[0]);
                     if (msg.id === serverInfo.last_message) {
                         msg.channel.send("" + number);

@@ -62,7 +62,7 @@ async function addServer(channelId, serverId) {
 }
 
 async function updateNumber(number, serverId) {
-    if(!isNumber(number)){
+    if(!isNumber(number.toString())){
         return "Not a number"
     }
     let conn = await pool.getConnection();
@@ -77,7 +77,7 @@ async function updateNumber(number, serverId) {
 }
 
 async function updateGoal(goal, serverId) {
-    if(!isNumber(goal)){
+    if(!isNumber(goal.toString())){
         return "Not a number"
     }
     let conn = await pool.getConnection();
@@ -130,7 +130,7 @@ async function handleCommand(msg){
             let response = await addServer(contentArr[1], msg.guild.id)
             msg.reply(response)
         }else if(contentArr[0] === `${settings.prefix}number`){
-            let response = await updateNumber(contentArr[1], msg.guild.id)
+            let response = await updateNumber(parseInt(contentArr[1]), msg.guild.id)
             msg.reply(response)
         }else if(contentArr[0] === `${settings.prefix}goal`){
             let response = await updateGoal(contentArr[1], msg.guild.id)
@@ -157,7 +157,7 @@ client.on('message', async msg => {
     if(serverExists(msg.guild.id)){
         let serverInfo = serverDictionary[msg.guild.id]
         if(msg.channel.id === serverInfo.channel){
-            if(isNumber(msg.content)){
+            if(isNumber(msg.content.toString())){
                 if(msg.member.id === serverInfo.last_sender){
                     msg.reply("You can't send a number twice in a row!").then(mesg => mesg.delete({timeout: 10000}))
                     await msg.delete()
@@ -165,7 +165,7 @@ client.on('message', async msg => {
                 }
                 let number = parseInt(msg.content.split(" ")[0])
                 if(number === serverInfo.last_number + 1){
-                    await updateNumber(`${number}`, msg.guild.id)
+                    await updateNumber(number, msg.guild.id)
                     await updateSender(msg.member.id, msg.guild.id)
                     await updateMessage(msg.id, msg.guild.id)
                     if(number%100 === 0 || number === serverInfo.goal){
@@ -198,7 +198,7 @@ client.on('messageDelete', async msg => {
     if(serverExists(msg.guild.id)){
         let serverInfo = serverDictionary[msg.guild.id]
         if(msg.channel.id === serverInfo.channel){
-            if(isNumber(msg.content)){
+            if(isNumber(msg.content.toString())){
                 let number = parseInt(msg.content.split(" ")[0])
                 if(msg.id === serverInfo.last_message){
                     msg.channel.send(`${number}`)

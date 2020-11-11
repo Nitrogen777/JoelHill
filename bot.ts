@@ -16,22 +16,26 @@ ${settings.prefix}channel: set the server's counting channel (ADMIN ONLY!)
 ${settings.prefix}number: set the server's last number (ADMIN ONLY!)
 ${settings.prefix}goal: set the server's goal (ADMIN ONLY!)\`\`\``
 
-async function serverExists(serverId) {
-    let conn = await pool.getConnection();
-    let content = await conn.query("SELECT * FROM servers WHERE id = ?;", [serverId]);
-    conn.end()
-    return content.length >= 1;
+var serverDictionary:{[key: string]: {id: string,
+     channel: string, 
+     last_number: number, 
+     goal: number, 
+     last_sender: string,
+     last_message: string}} = {}
+
+function serverExists(serverId) {
+    return serverId in serverDictionary;
 }
 
-async function getServer(serverId) {
+async function getServers(){
     let conn = await pool.getConnection();
-    let content = await conn.query("SELECT * FROM servers WHERE id = ?;", [serverId]);
+    let content = await conn.query("SELECT * FROM servers;");
     conn.end()
-    return content[0];
+    return content;
 }
 
-async function getInfo(serverId) {
-    let info = await getServer(serverId)
+function getInfo(serverId) {
+    let info = serverDictionary[serverId]
     return `\`\`\`
 Counting channel: <#${info.channel}>
 Current Number: ${info.last_number}
@@ -47,7 +51,7 @@ async function addServer(channelId, serverId) {
         return "Channel not found"
     }
     let conn = await pool.getConnection();
-    if(await serverExists(serverId)){
+    if(serverExists(serverId)){
         await conn.query("UPDATE servers SET channel = ? WHERE id = ?", [channelId, serverId]);
         conn.end()
         return `Set server's counting channel to ${channel.toString()}`;
@@ -62,9 +66,10 @@ async function updateNumber(number, serverId) {
         return "Not a number"
     }
     let conn = await pool.getConnection();
-    if(await serverExists(serverId)){
+    if(serverExists(serverId)){
         await conn.query("UPDATE servers SET last_number = ? WHERE id = ?", [number, serverId]);
         conn.end()
+        serverDictionary[serverId].last_number = number;
         return `Set server's last number to ${number}`;
     }
     conn.end()
@@ -76,9 +81,10 @@ async function updateGoal(goal, serverId) {
         return "Not a number"
     }
     let conn = await pool.getConnection();
-    if(await serverExists(serverId)){
+    if(serverExists(serverId)){
         await conn.query("UPDATE servers SET goal = ? WHERE id = ?", [goal, serverId]);
         conn.end()
+        serverDictionary[serverId].goal = goal;
         return `Set server's goal to ${goal}`;
     }
     conn.end()
@@ -87,18 +93,20 @@ async function updateGoal(goal, serverId) {
 
 async function updateSender(sender, serverId) {
     let conn = await pool.getConnection();
-    if(await serverExists(serverId)){
+    if(serverExists(serverId)){
         await conn.query("UPDATE servers SET last_sender = ? WHERE id = ?", [sender, serverId]);
         conn.end()
+        serverDictionary[serverId].last_sender = sender;
     }
     conn.end()
 }
 
 async function updateMessage(message, serverId) {
     let conn = await pool.getConnection();
-    if(await serverExists(serverId)){
+    if(serverExists(serverId)){
         await conn.query("UPDATE servers SET last_message = ? WHERE id = ?", [message, serverId]);
         conn.end()
+        serverDictionary[serverId].last_message = message;
     }
     conn.end()
 }
@@ -110,7 +118,7 @@ async function handleCommand(msg){
             return
         }
         if(msg.content === `${settings.prefix}info`){
-            msg.channel.send(await getInfo(msg.guild.id))
+            msg.channel.send(getInfo(msg.guild.id))
             return
         }
         if (!msg.member.hasPermission("ADMINISTRATOR")){
@@ -136,14 +144,18 @@ function isNumber(content){
     return /\d/.test(contentArr[0]);
 }
 
-client.on('ready', () => {
+client.on('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`);
+    let servers = await getServers();
+    servers.forEach(element => {
+        serverDictionary[element.id] = element;
+    });
 });
 
 client.on('message', async msg => {
     if(msg.author.bot) return;
-    if(await serverExists(msg.guild.id)){
-        let serverInfo = await getServer(msg.guild.id)
+    if(serverExists(msg.guild.id)){
+        let serverInfo = serverDictionary[msg.guild.id]
         if(msg.channel.id === serverInfo.channel){
             if(isNumber(msg.content)){
                 if(msg.member.id === serverInfo.last_sender){
@@ -183,11 +195,12 @@ client.on('message', async msg => {
 
 client.on('messageDelete', async msg => {
     if(msg.author.bot) return;
-    if(await serverExists(msg.guild.id)){
-        if(msg.channel.id === (await getServer(msg.guild.id)).channel){
+    if(serverExists(msg.guild.id)){
+        let serverInfo = serverDictionary[msg.guild.id]
+        if(msg.channel.id === serverInfo.channel){
             if(isNumber(msg.content)){
                 let number = parseInt(msg.content.split(" ")[0])
-                if(msg.id === (await getServer(msg.guild.id)).last_message){
+                if(msg.id === serverInfo.last_message){
                     msg.channel.send(`${number}`)
                 }
             }

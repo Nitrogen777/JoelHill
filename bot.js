@@ -37,6 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 var Discord = require("discord.js");
+var pm2 = require("@pm2/io");
 var client = new Discord.Client();
 var fs = require("fs");
 var mariadb = require("mariadb");
@@ -46,6 +47,12 @@ var pool = mariadb.createPool({
     user: settings.DBuser,
     password: settings.DBpass,
     database: settings.DBdatabase
+});
+var rightNumberFrequency = pm2.meter({
+    name: 'Right Number Frequency'
+});
+var wrongNumberFrequency = pm2.meter({
+    name: 'Wrong Number Frequency'
 });
 var help = "```css\nWelcome to Joel Hill, the counting bot!\nCommands:\n" + settings.prefix + "help: display this message\n" + settings.prefix + "info: info about the ongoing counting process\n" + settings.prefix + "channel: set the server's counting channel (ADMIN ONLY!)\n" + settings.prefix + "number: set the server's last number (ADMIN ONLY!)\n" + settings.prefix + "goal: set the server's goal (ADMIN ONLY!)```";
 var serverDictionary = {};
@@ -282,6 +289,7 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 return [4 /*yield*/, msg["delete"]()];
             case 1:
                 _a.sent();
+                wrongNumberFrequency.mark();
                 return [2 /*return*/];
             case 2:
                 number = parseInt(msg.content.split(" ")[0]);
@@ -295,6 +303,7 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 return [4 /*yield*/, updateMessage(msg.id, msg.guild.id)];
             case 5:
                 _a.sent();
+                rightNumberFrequency.mark();
                 if (!(number % 100 === 0 || number === serverInfo.goal)) return [3 /*break*/, 8];
                 return [4 /*yield*/, msg.react('🎉')];
             case 6:
@@ -314,6 +323,7 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 return [4 /*yield*/, msg["delete"]()];
             case 10:
                 _a.sent();
+                wrongNumberFrequency.mark();
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
             case 12:
@@ -321,6 +331,7 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 return [4 /*yield*/, msg["delete"]()];
             case 13:
                 _a.sent();
+                wrongNumberFrequency.mark();
                 _a.label = 14;
             case 14: return [3 /*break*/, 17];
             case 15: return [4 /*yield*/, handleCommand(msg)];

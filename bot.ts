@@ -1,4 +1,5 @@
 import Discord = require('discord.js');
+import pm2 = require('@pm2/io')
 const client = new Discord.Client();
 import fs = require('fs');
 import mariadb = require("mariadb");
@@ -9,6 +10,12 @@ const pool = mariadb.createPool({
     password: settings.DBpass,
     database: settings.DBdatabase
 });
+const rightNumberFrequency = pm2.meter({
+    name: 'Right Number Frequency'
+})
+const wrongNumberFrequency = pm2.meter({
+    name: 'Wrong Number Frequency'
+})
 const help = `\`\`\`css\nWelcome to Joel Hill, the counting bot!\nCommands:
 ${settings.prefix}help: display this message
 ${settings.prefix}info: info about the ongoing counting process
@@ -161,6 +168,7 @@ client.on('message', async msg => {
                 if(msg.member.id === serverInfo.last_sender){
                     msg.reply("You can't send a number twice in a row!").then(mesg => mesg.delete({timeout: 10000}))
                     await msg.delete()
+                    wrongNumberFrequency.mark()
                     return
                 }
                 let number = parseInt(msg.content.split(" ")[0])
@@ -168,6 +176,7 @@ client.on('message', async msg => {
                     await updateNumber(number, msg.guild.id)
                     await updateSender(msg.member.id, msg.guild.id)
                     await updateMessage(msg.id, msg.guild.id)
+                    rightNumberFrequency.mark()
                     if(number%100 === 0 || number === serverInfo.goal){
                         await msg.react('🎉')
                         if(number%1000 === 0 || number === serverInfo.goal){
@@ -180,10 +189,12 @@ client.on('message', async msg => {
                 }else{
                     msg.reply("Thats not the correct number!").then(mesg => mesg.delete({timeout: 10000}))
                     await msg.delete()
+                    wrongNumberFrequency.mark()
                 }
             }else{
                 msg.reply("Thats not a number!").then(mesg => mesg.delete({timeout: 10000}))
                 await msg.delete()
+                wrongNumberFrequency.mark()
             }
         }else{
             await handleCommand(msg)

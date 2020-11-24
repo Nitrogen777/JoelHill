@@ -77,6 +77,9 @@ function getServers() {
     });
 }
 function getInfo(serverId) {
+    if (!serverExists(serverId)) {
+        return "Set the server's channel first!";
+    }
     var info = serverDictionary[serverId];
     return "```\nCounting channel: <#" + info.channel + ">\nCurrent Number: " + info.last_number + "\nGoal: " + info.goal + "\nNumbers left: " + (info.goal - info.last_number) + "```";
 }

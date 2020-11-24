@@ -42,6 +42,9 @@ async function getServers(){
 }
 
 function getInfo(serverId) {
+    if(!serverExists(serverId)){
+        return `Set the server's channel first!`
+    }
     let info = serverDictionary[serverId]
     return `\`\`\`
 Counting channel: <#${info.channel}>

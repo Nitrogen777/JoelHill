@@ -60,10 +60,19 @@ async function addServer(channelId, serverId) {
     let conn = await pool.getConnection();
     if(serverExists(serverId)){
         await conn.query("UPDATE servers SET channel = ? WHERE id = ?", [channelId, serverId]);
+        serverDictionary[serverId].channel = channelId;
         conn.end()
         return `Set server's counting channel to ${channel.toString()}`;
     }
     await conn.query("INSERT INTO servers VALUES(?,?,?,?,?,?);", [serverId, channelId, 0, 100, null, null]);
+    serverDictionary[serverId] = {
+        id: serverId,
+        channel: channelId,
+        last_number: 0,
+        goal: 100,
+        last_sender: null,
+        last_message: null
+    };
     conn.end()
     return `Set server's counting channel to ${channel.toString()}`;
 }

@@ -101,11 +101,20 @@ function addServer(channelId, serverId) {
                     return [4 /*yield*/, conn.query("UPDATE servers SET channel = ? WHERE id = ?", [channelId, serverId])];
                 case 5:
                     _a.sent();
+                    serverDictionary[serverId].channel = channelId;
                     conn.end();
                     return [2 /*return*/, "Set server's counting channel to " + channel.toString()];
                 case 6: return [4 /*yield*/, conn.query("INSERT INTO servers VALUES(?,?,?,?,?,?);", [serverId, channelId, 0, 100, null, null])];
                 case 7:
                     _a.sent();
+                    serverDictionary[serverId] = {
+                        id: serverId,
+                        channel: channelId,
+                        last_number: 0,
+                        goal: 100,
+                        last_sender: null,
+                        last_message: null
+                    };
                     conn.end();
                     return [2 /*return*/, "Set server's counting channel to " + channel.toString()];
             }

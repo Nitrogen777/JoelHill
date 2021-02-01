@@ -73,6 +73,9 @@ Numbers left: ${info.goal - info.last_number}\`\`\``
 }
 
 function getScore(msg) {
+    if(!userExists(msg.member.id, msg.guild.id)){
+        return "You didn't count yet!"
+    }
     return new Discord.MessageEmbed()
         .setColor('#0099ff')
         .setTitle(`Score for ${msg.member.user.username}`)
@@ -87,7 +90,7 @@ function getScore(msg) {
 
 function getList(msg) {
     let list = ""
-    getServerScoreboard(msg.guild.id).forEach((element, i) => {
+    getServerScoreboard(msg.guild.id).slice(0, 25).forEach((element, i) => {
         list += `${i + 1}. ` + client.users.cache.find(user => user.id === element.user_id).username +
             ` - ${getUserScore(element.user_id, element.server_id)}` + "\n"
     })
@@ -106,7 +109,7 @@ function getUserScore(userId, serverId) {
 
 function getServerScoreboard(serverId) {
     return userScores.filter((element => element.server_id === serverId))
-        .sort((a, b) => (a.score > b.score) ? 1 : -1).slice(0, 25)
+        .sort((a, b) => (a.score < b.score) ? 1 : -1)
 }
 
 function setUserScore(userId, serverId, score) {

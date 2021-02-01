@@ -106,6 +106,9 @@ function getInfo(serverId) {
     return "```\nCounting channel: <#" + info.channel + ">\nCurrent Number: " + info.last_number + "\nGoal: " + info.goal + "\nNumbers left: " + (info.goal - info.last_number) + "```";
 }
 function getScore(msg) {
+    if (!userExists(msg.member.id, msg.guild.id)) {
+        return "You didn't count yet!";
+    }
     return new Discord.MessageEmbed()
         .setColor('#0099ff')
         .setTitle("Score for " + msg.member.user.username)
@@ -120,7 +123,7 @@ function getScore(msg) {
 }
 function getList(msg) {
     var list = "";
-    getServerScoreboard(msg.guild.id).forEach(function (element, i) {
+    getServerScoreboard(msg.guild.id).slice(0, 25).forEach(function (element, i) {
         list += i + 1 + ". " + client.users.cache.find(function (user) { return user.id === element.user_id; }).username +
             (" - " + getUserScore(element.user_id, element.server_id)) + "\n";
     });
@@ -137,7 +140,7 @@ function getUserScore(userId, serverId) {
 }
 function getServerScoreboard(serverId) {
     return userScores.filter((function (element) { return element.server_id === serverId; }))
-        .sort(function (a, b) { return (a.score > b.score) ? 1 : -1; }).slice(0, 25);
+        .sort(function (a, b) { return (a.score < b.score) ? 1 : -1; });
 }
 function setUserScore(userId, serverId, score) {
     userScores.forEach(function (element) {

@@ -202,13 +202,14 @@ function incrementUser(userId, serverId) {
                     _a.sent();
                     setUserScore(userId, serverId, new_score);
                     conn.end();
-                    _a.label = 3;
+                    return [3 /*break*/, 5];
                 case 3: return [4 /*yield*/, conn.query("INSERT INTO user_scores VALUES(?,?,?);", [userId, serverId, 1])];
                 case 4:
                     _a.sent();
                     userScores.push({ user_id: userId, server_id: serverId, score: 1 });
                     conn.end();
-                    return [2 /*return*/];
+                    _a.label = 5;
+                case 5: return [2 /*return*/];
             }
         });
     });

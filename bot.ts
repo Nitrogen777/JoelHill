@@ -152,10 +152,11 @@ async function incrementUser(userId, serverId) {
             [new_score, userId, serverId]);
         setUserScore(userId, serverId, new_score)
         conn.end()
+    } else {
+        await conn.query("INSERT INTO user_scores VALUES(?,?,?);", [userId, serverId, 1]);
+        userScores.push({ user_id: userId, server_id: serverId, score: 1 })
+        conn.end()
     }
-    await conn.query("INSERT INTO user_scores VALUES(?,?,?);", [userId, serverId, 1]);
-    userScores.push({ user_id: userId, server_id: serverId, score: 1 })
-    conn.end()
 }
 
 async function updateNumber(number, serverId) {

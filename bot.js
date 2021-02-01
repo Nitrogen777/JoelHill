@@ -54,10 +54,15 @@ var rightNumberFrequency = pm2.meter({
 var wrongNumberFrequency = pm2.meter({
     name: 'Wrong Number Frequency'
 });
-var help = "```css\nWelcome to Joel Hill, the counting bot!\nCommands:\n" + settings.prefix + "help: display this message\n" + settings.prefix + "info: info about the ongoing counting process\n" + settings.prefix + "channel: set the server's counting channel (ADMIN ONLY!)\n" + settings.prefix + "number: set the server's last number (ADMIN ONLY!)\n" + settings.prefix + "goal: set the server's goal (ADMIN ONLY!)```";
+var help = "```css\nWelcome to Joel Hill, the counting bot!\nCommands:\n" + settings.prefix + "help: display this message\n" + settings.prefix + "info: info about the ongoing counting process\n" + settings.prefix + "level: get your counting score and rank\n" + settings.prefix + "scoreboard: the server's counting scoreboard\n" + settings.prefix + "channel: set the server's counting channel (ADMIN ONLY!)\n" + settings.prefix + "number: set the server's last number (ADMIN ONLY!)\n" + settings.prefix + "goal: set the server's goal (ADMIN ONLY!)```";
 var serverDictionary = {};
+var userScores = [];
 function serverExists(serverId) {
     return serverId in serverDictionary;
+}
+function userExists(userId, serverId) {
+    return userScores.filter(function (element) { return element.user_id === userId; })
+        .filter(function (element) { return element.server_id === serverId; }).length > 0;
 }
 function getServers() {
     return __awaiter(this, void 0, void 0, function () {
@@ -76,12 +81,70 @@ function getServers() {
         });
     });
 }
+function getUserScores() {
+    return __awaiter(this, void 0, void 0, function () {
+        var conn, content;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, pool.getConnection()];
+                case 1:
+                    conn = _a.sent();
+                    return [4 /*yield*/, conn.query("SELECT * FROM user_scores;")];
+                case 2:
+                    content = _a.sent();
+                    conn.end();
+                    return [2 /*return*/, content];
+            }
+        });
+    });
+}
 function getInfo(serverId) {
     if (!serverExists(serverId)) {
         return "Set the server's channel first!";
     }
     var info = serverDictionary[serverId];
     return "```\nCounting channel: <#" + info.channel + ">\nCurrent Number: " + info.last_number + "\nGoal: " + info.goal + "\nNumbers left: " + (info.goal - info.last_number) + "```";
+}
+function getScore(msg) {
+    return new Discord.MessageEmbed()
+        .setColor('#0099ff')
+        .setTitle("Score for " + msg.member.user.username)
+        .setAuthor("Joel Hill", client.user.avatarURL())
+        .setThumbnail(msg.member.user.avatarURL())
+        .setDescription(getUserScore(msg.member.id, msg.guild.id))
+        .addFields({
+        name: 'User Rank',
+        value: getServerScoreboard(msg.guild.id)
+            .findIndex(function (element) { return element.user_id === msg.member.id; }) + 1
+    });
+}
+function getList(msg) {
+    var list = "";
+    getServerScoreboard(msg.guild.id).forEach(function (element, i) {
+        list += i + 1 + ". " + client.users.cache.find(function (user) { return user.id === element.user_id; }).username +
+            (" - " + getUserScore(element.user_id, element.server_id)) + "\n";
+    });
+    return new Discord.MessageEmbed()
+        .setColor('#0099ff')
+        .setAuthor("Joel Hill", client.user.avatarURL())
+        .addFields({
+        name: 'Scoreboard', value: list
+    });
+}
+function getUserScore(userId, serverId) {
+    return userScores.filter(function (element) { return element.user_id === userId; })
+        .filter(function (element) { return element.server_id === serverId; })[0].score;
+}
+function getServerScoreboard(serverId) {
+    return userScores.filter((function (element) { return element.server_id === serverId; }))
+        .sort(function (a, b) { return (a.score > b.score) ? 1 : -1; }).slice(0, 25);
+}
+function setUserScore(userId, serverId, score) {
+    userScores.forEach(function (element) {
+        if (element.user_id === userId && element.server_id === serverId) {
+            element.score = score;
+        }
+    });
 }
 function addServer(channelId, serverId) {
     return __awaiter(this, void 0, void 0, function () {
@@ -120,6 +183,32 @@ function addServer(channelId, serverId) {
                     };
                     conn.end();
                     return [2 /*return*/, "Set server's counting channel to " + channel.toString()];
+            }
+        });
+    });
+}
+function incrementUser(userId, serverId) {
+    return __awaiter(this, void 0, void 0, function () {
+        var conn, new_score;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, pool.getConnection()];
+                case 1:
+                    conn = _a.sent();
+                    if (!userExists(userId, serverId)) return [3 /*break*/, 3];
+                    new_score = getUserScore(userId, serverId) + 1;
+                    return [4 /*yield*/, conn.query("UPDATE user_scores SET score = ? WHERE user_id = ? and server_id = ?", [new_score, userId, serverId])];
+                case 2:
+                    _a.sent();
+                    setUserScore(userId, serverId, new_score);
+                    conn.end();
+                    _a.label = 3;
+                case 3: return [4 /*yield*/, conn.query("INSERT INTO user_scores VALUES(?,?,?);", [userId, serverId, 1])];
+                case 4:
+                    _a.sent();
+                    userScores.push({ user_id: userId, server_id: serverId, score: 1 });
+                    conn.end();
+                    return [2 /*return*/];
             }
         });
     });
@@ -235,6 +324,14 @@ function handleCommand(msg) {
                         msg.channel.send(getInfo(msg.guild.id));
                         return [2 /*return*/];
                     }
+                    if (msg.content === settings.prefix + "level") {
+                        msg.channel.send(getScore(msg));
+                        return [2 /*return*/];
+                    }
+                    if (msg.content === settings.prefix + "scoreboard") {
+                        msg.channel.send(getList(msg));
+                        return [2 /*return*/];
+                    }
                     if (!msg.member.hasPermission("ADMINISTRATOR")) {
                         msg.reply("You are not an admin!");
                         return [2 /*return*/];
@@ -270,7 +367,7 @@ function isNumber(content) {
     return /\d/.test(contentArr[0]);
 }
 client.on('ready', function () { return __awaiter(void 0, void 0, void 0, function () {
-    var servers;
+    var servers, scores;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -280,6 +377,12 @@ client.on('ready', function () { return __awaiter(void 0, void 0, void 0, functi
                 servers = _a.sent();
                 servers.forEach(function (element) {
                     serverDictionary[element.id] = element;
+                });
+                return [4 /*yield*/, getUserScores()];
+            case 2:
+                scores = _a.sent();
+                scores.forEach(function (element) {
+                    userScores.push(element);
                 });
                 return [2 /*return*/];
         }
@@ -292,10 +395,10 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
             case 0:
                 if (msg.author.bot)
                     return [2 /*return*/];
-                if (!serverExists(msg.guild.id)) return [3 /*break*/, 18];
+                if (!serverExists(msg.guild.id)) return [3 /*break*/, 19];
                 serverInfo = serverDictionary[msg.guild.id];
-                if (!(msg.channel.id === serverInfo.channel)) return [3 /*break*/, 15];
-                if (!isNumber(msg.content.toString())) return [3 /*break*/, 12];
+                if (!(msg.channel.id === serverInfo.channel)) return [3 /*break*/, 16];
+                if (!isNumber(msg.content.toString())) return [3 /*break*/, 13];
                 if (!(msg.member.id === serverInfo.last_sender)) return [3 /*break*/, 2];
                 msg.reply("You can't send a number twice in a row!").then(function (mesg) { return mesg["delete"]({ timeout: 10000 }); });
                 return [4 /*yield*/, msg["delete"]()];
@@ -305,7 +408,7 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 return [2 /*return*/];
             case 2:
                 number = parseInt(msg.content.split(" ")[0]);
-                if (!(number === serverInfo.last_number + 1)) return [3 /*break*/, 9];
+                if (!(number === serverInfo.last_number + 1)) return [3 /*break*/, 10];
                 return [4 /*yield*/, updateNumber(number, msg.guild.id)];
             case 3:
                 _a.sent();
@@ -315,47 +418,50 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 return [4 /*yield*/, updateMessage(msg.id, msg.guild.id)];
             case 5:
                 _a.sent();
-                rightNumberFrequency.mark();
-                if (!(number % 100 === 0 || number === serverInfo.goal)) return [3 /*break*/, 8];
-                return [4 /*yield*/, msg.react('🎉')];
+                return [4 /*yield*/, incrementUser(msg.member.id, msg.guild.id)];
             case 6:
                 _a.sent();
-                if (!(number % 1000 === 0 || number === serverInfo.goal)) return [3 /*break*/, 8];
-                return [4 /*yield*/, msg.react('⭐')];
+                rightNumberFrequency.mark();
+                if (!(number % 100 === 0 || number === serverInfo.goal)) return [3 /*break*/, 9];
+                return [4 /*yield*/, msg.react('🎉')];
             case 7:
                 _a.sent();
-                _a.label = 8;
+                if (!(number % 1000 === 0 || number === serverInfo.goal)) return [3 /*break*/, 9];
+                return [4 /*yield*/, msg.react('⭐')];
             case 8:
+                _a.sent();
+                _a.label = 9;
+            case 9:
                 if (number === serverInfo.goal) {
                     msg.channel.send("Goal reached!");
                 }
-                return [3 /*break*/, 11];
-            case 9:
+                return [3 /*break*/, 12];
+            case 10:
                 msg.reply("Thats not the correct number!").then(function (mesg) { return mesg["delete"]({ timeout: 10000 }); });
                 return [4 /*yield*/, msg["delete"]()];
-            case 10:
+            case 11:
                 _a.sent();
                 wrongNumberFrequency.mark();
-                _a.label = 11;
-            case 11: return [3 /*break*/, 14];
-            case 12:
+                _a.label = 12;
+            case 12: return [3 /*break*/, 15];
+            case 13:
                 msg.reply("Thats not a number!").then(function (mesg) { return mesg["delete"]({ timeout: 10000 }); });
                 return [4 /*yield*/, msg["delete"]()];
-            case 13:
+            case 14:
                 _a.sent();
                 wrongNumberFrequency.mark();
-                _a.label = 14;
-            case 14: return [3 /*break*/, 17];
-            case 15: return [4 /*yield*/, handleCommand(msg)];
-            case 16:
+                _a.label = 15;
+            case 15: return [3 /*break*/, 18];
+            case 16: return [4 /*yield*/, handleCommand(msg)];
+            case 17:
                 _a.sent();
-                _a.label = 17;
-            case 17: return [3 /*break*/, 20];
-            case 18: return [4 /*yield*/, handleCommand(msg)];
-            case 19:
+                _a.label = 18;
+            case 18: return [3 /*break*/, 21];
+            case 19: return [4 /*yield*/, handleCommand(msg)];
+            case 20:
                 _a.sent();
-                _a.label = 20;
-            case 20: return [2 /*return*/];
+                _a.label = 21;
+            case 21: return [2 /*return*/];
         }
     });
 }); });

@@ -73,7 +73,7 @@ Numbers left: ${info.goal - info.last_number}\`\`\``
 }
 
 function getScore(msg) {
-    if(!userExists(msg.member.id, msg.guild.id)){
+    if (!userExists(msg.member.id, msg.guild.id)) {
         return "You didn't count yet!"
     }
     return new Discord.MessageEmbed()
@@ -147,17 +147,17 @@ async function addServer(channelId, serverId) {
     return `Set server's counting channel to ${channel.toString()}`;
 }
 
-async function incrementUser(userId, serverId) {
+async function incrementUser(userId, serverId, number) {
     let conn = await pool.getConnection();
     if (userExists(userId, serverId)) {
-        let new_score = getUserScore(userId, serverId) + 1
+        let new_score = getUserScore(userId, serverId) + number
         await conn.query("UPDATE user_scores SET score = ? WHERE user_id = ? and server_id = ?",
             [new_score, userId, serverId]);
         setUserScore(userId, serverId, new_score)
         conn.end()
     } else {
         await conn.query("INSERT INTO user_scores VALUES(?,?,?);", [userId, serverId, 1]);
-        userScores.push({ user_id: userId, server_id: serverId, score: 1 })
+        userScores.push({ user_id: userId, server_id: serverId, score: number })
         conn.end()
     }
 }
@@ -282,13 +282,20 @@ client.on('message', async msg => {
                     await updateNumber(number, msg.guild.id)
                     await updateSender(msg.member.id, msg.guild.id)
                     await updateMessage(msg.id, msg.guild.id)
-                    await incrementUser(msg.member.id, msg.guild.id)
                     rightNumberFrequency.mark()
                     if (number % 100 === 0 || number === serverInfo.goal) {
                         await msg.react('🎉')
                         if (number % 1000 === 0 || number === serverInfo.goal) {
                             await msg.react('⭐')
                         }
+                    }
+                    //i know im repeating it, its just simpler, its not that bad ok?
+                    if (number % 1000 === 0) {
+                        await incrementUser(msg.member.id, msg.guild.id, 1000)
+                    } else if (number % 100 === 0) {
+                        await incrementUser(msg.member.id, msg.guild.id, 100)
+                    } else {
+                        await incrementUser(msg.member.id, msg.guild.id, 1)
                     }
                     if (number === serverInfo.goal) {
                         msg.channel.send("Goal reached!")

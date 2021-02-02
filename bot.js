@@ -190,7 +190,7 @@ function addServer(channelId, serverId) {
         });
     });
 }
-function incrementUser(userId, serverId) {
+function incrementUser(userId, serverId, number) {
     return __awaiter(this, void 0, void 0, function () {
         var conn, new_score;
         return __generator(this, function (_a) {
@@ -199,7 +199,7 @@ function incrementUser(userId, serverId) {
                 case 1:
                     conn = _a.sent();
                     if (!userExists(userId, serverId)) return [3 /*break*/, 3];
-                    new_score = getUserScore(userId, serverId) + 1;
+                    new_score = getUserScore(userId, serverId) + number;
                     return [4 /*yield*/, conn.query("UPDATE user_scores SET score = ? WHERE user_id = ? and server_id = ?", [new_score, userId, serverId])];
                 case 2:
                     _a.sent();
@@ -209,7 +209,7 @@ function incrementUser(userId, serverId) {
                 case 3: return [4 /*yield*/, conn.query("INSERT INTO user_scores VALUES(?,?,?);", [userId, serverId, 1])];
                 case 4:
                     _a.sent();
-                    userScores.push({ user_id: userId, server_id: serverId, score: 1 });
+                    userScores.push({ user_id: userId, server_id: serverId, score: number });
                     conn.end();
                     _a.label = 5;
                 case 5: return [2 /*return*/];
@@ -399,10 +399,10 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
             case 0:
                 if (msg.author.bot)
                     return [2 /*return*/];
-                if (!serverExists(msg.guild.id)) return [3 /*break*/, 19];
+                if (!serverExists(msg.guild.id)) return [3 /*break*/, 24];
                 serverInfo = serverDictionary[msg.guild.id];
-                if (!(msg.channel.id === serverInfo.channel)) return [3 /*break*/, 16];
-                if (!isNumber(msg.content.toString())) return [3 /*break*/, 13];
+                if (!(msg.channel.id === serverInfo.channel)) return [3 /*break*/, 21];
+                if (!isNumber(msg.content.toString())) return [3 /*break*/, 18];
                 if (!(msg.member.id === serverInfo.last_sender)) return [3 /*break*/, 2];
                 msg.reply("You can't send a number twice in a row!").then(function (mesg) { return mesg["delete"]({ timeout: 10000 }); });
                 return [4 /*yield*/, msg["delete"]()];
@@ -412,7 +412,7 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 return [2 /*return*/];
             case 2:
                 number = parseInt(msg.content.split(" ")[0]);
-                if (!(number === serverInfo.last_number + 1)) return [3 /*break*/, 10];
+                if (!(number === serverInfo.last_number + 1)) return [3 /*break*/, 15];
                 return [4 /*yield*/, updateNumber(number, msg.guild.id)];
             case 3:
                 _a.sent();
@@ -422,50 +422,63 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 return [4 /*yield*/, updateMessage(msg.id, msg.guild.id)];
             case 5:
                 _a.sent();
-                return [4 /*yield*/, incrementUser(msg.member.id, msg.guild.id)];
+                rightNumberFrequency.mark();
+                if (!(number % 100 === 0 || number === serverInfo.goal)) return [3 /*break*/, 8];
+                return [4 /*yield*/, msg.react('🎉')];
             case 6:
                 _a.sent();
-                rightNumberFrequency.mark();
-                if (!(number % 100 === 0 || number === serverInfo.goal)) return [3 /*break*/, 9];
-                return [4 /*yield*/, msg.react('🎉')];
+                if (!(number % 1000 === 0 || number === serverInfo.goal)) return [3 /*break*/, 8];
+                return [4 /*yield*/, msg.react('⭐')];
             case 7:
                 _a.sent();
-                if (!(number % 1000 === 0 || number === serverInfo.goal)) return [3 /*break*/, 9];
-                return [4 /*yield*/, msg.react('⭐')];
+                _a.label = 8;
             case 8:
-                _a.sent();
-                _a.label = 9;
+                if (!(number % 1000 === 0)) return [3 /*break*/, 10];
+                return [4 /*yield*/, incrementUser(msg.member.id, msg.guild.id, 1000)];
             case 9:
+                _a.sent();
+                return [3 /*break*/, 14];
+            case 10:
+                if (!(number % 100 === 0)) return [3 /*break*/, 12];
+                return [4 /*yield*/, incrementUser(msg.member.id, msg.guild.id, 100)];
+            case 11:
+                _a.sent();
+                return [3 /*break*/, 14];
+            case 12: return [4 /*yield*/, incrementUser(msg.member.id, msg.guild.id, 1)];
+            case 13:
+                _a.sent();
+                _a.label = 14;
+            case 14:
                 if (number === serverInfo.goal) {
                     msg.channel.send("Goal reached!");
                 }
-                return [3 /*break*/, 12];
-            case 10:
+                return [3 /*break*/, 17];
+            case 15:
                 msg.reply("Thats not the correct number!").then(function (mesg) { return mesg["delete"]({ timeout: 10000 }); });
                 return [4 /*yield*/, msg["delete"]()];
-            case 11:
+            case 16:
                 _a.sent();
                 wrongNumberFrequency.mark();
-                _a.label = 12;
-            case 12: return [3 /*break*/, 15];
-            case 13:
+                _a.label = 17;
+            case 17: return [3 /*break*/, 20];
+            case 18:
                 msg.reply("Thats not a number!").then(function (mesg) { return mesg["delete"]({ timeout: 10000 }); });
                 return [4 /*yield*/, msg["delete"]()];
-            case 14:
+            case 19:
                 _a.sent();
                 wrongNumberFrequency.mark();
-                _a.label = 15;
-            case 15: return [3 /*break*/, 18];
-            case 16: return [4 /*yield*/, handleCommand(msg)];
-            case 17:
+                _a.label = 20;
+            case 20: return [3 /*break*/, 23];
+            case 21: return [4 /*yield*/, handleCommand(msg)];
+            case 22:
                 _a.sent();
-                _a.label = 18;
-            case 18: return [3 /*break*/, 21];
-            case 19: return [4 /*yield*/, handleCommand(msg)];
-            case 20:
+                _a.label = 23;
+            case 23: return [3 /*break*/, 26];
+            case 24: return [4 /*yield*/, handleCommand(msg)];
+            case 25:
                 _a.sent();
-                _a.label = 21;
-            case 21: return [2 /*return*/];
+                _a.label = 26;
+            case 26: return [2 /*return*/];
         }
     });
 }); });

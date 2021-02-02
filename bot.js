@@ -434,13 +434,13 @@ client.on('message', function (msg) { return __awaiter(void 0, void 0, void 0, f
                 _a.label = 8;
             case 8:
                 if (!(number % 1000 === 0)) return [3 /*break*/, 10];
-                return [4 /*yield*/, incrementUser(msg.member.id, msg.guild.id, 1000)];
+                return [4 /*yield*/, incrementUser(msg.member.id, msg.guild.id, 50)];
             case 9:
                 _a.sent();
                 return [3 /*break*/, 14];
             case 10:
                 if (!(number % 100 === 0)) return [3 /*break*/, 12];
-                return [4 /*yield*/, incrementUser(msg.member.id, msg.guild.id, 100)];
+                return [4 /*yield*/, incrementUser(msg.member.id, msg.guild.id, 5)];
             case 11:
                 _a.sent();
                 return [3 /*break*/, 14];

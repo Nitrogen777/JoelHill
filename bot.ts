@@ -291,9 +291,9 @@ client.on('message', async msg => {
                     }
                     //i know im repeating it, its just simpler, its not that bad ok?
                     if (number % 1000 === 0) {
-                        await incrementUser(msg.member.id, msg.guild.id, 1000)
+                        await incrementUser(msg.member.id, msg.guild.id, 50)
                     } else if (number % 100 === 0) {
-                        await incrementUser(msg.member.id, msg.guild.id, 100)
+                        await incrementUser(msg.member.id, msg.guild.id, 5)
                     } else {
                         await incrementUser(msg.member.id, msg.guild.id, 1)
                     }

@@ -87,13 +87,21 @@ function getScore(msg) {
                 .findIndex(element => element.user_id === msg.member.id) + 1
         })
 }
-
-function getList(msg) {
+async function getScoreboardString(server: Discord.Guild, amount: number) {
     let list = ""
-    getServerScoreboard(msg.guild.id).slice(0, 25).forEach((element, i) => {
-        list += `${i + 1}. ` + client.users.cache.find(user => user.id === element.user_id).username +
-            ` - ${getUserScore(element.user_id, element.server_id)}` + "\n"
+    let names = []
+    getServerScoreboard(server.id).slice(0, amount).forEach(async (element, i) => {
+        names.push(server.members.fetch(element.user_id).then(member => 
+            `${i + 1}. ${member.user.username} - ${getUserScore(element.user_id, element.server_id)}\n`))
     })
+    await Promise.all(names).then(values => values.forEach((element) => {
+        list = list.concat(element)
+    }))
+    return list
+}
+
+async function getList(msg: Discord.Message) {
+    let list = await getScoreboardString(msg.guild, 25)
     return new Discord.MessageEmbed()
         .setColor('#0099ff')
         .setAuthor("Joel Hill", client.user.avatarURL())
@@ -227,7 +235,7 @@ async function handleCommand(msg) {
             return
         }
         if (msg.content === `${settings.prefix}scoreboard`) {
-            msg.channel.send(getList(msg))
+            msg.channel.send(await getList(msg))
             return
         }
         if (!msg.member.hasPermission("ADMINISTRATOR")) {

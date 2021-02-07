@@ -121,17 +121,49 @@ function getScore(msg) {
             .findIndex(function (element) { return element.user_id === msg.member.id; }) + 1
     });
 }
-function getList(msg) {
-    var list = "";
-    getServerScoreboard(msg.guild.id).slice(0, 25).forEach(function (element, i) {
-        list += i + 1 + ". " + client.users.cache.find(function (user) { return user.id === element.user_id; }).username +
-            (" - " + getUserScore(element.user_id, element.server_id)) + "\n";
+function getScoreboardString(server, amount) {
+    return __awaiter(this, void 0, void 0, function () {
+        var list, names;
+        var _this = this;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    list = "";
+                    names = [];
+                    getServerScoreboard(server.id).slice(0, amount).forEach(function (element, i) { return __awaiter(_this, void 0, void 0, function () {
+                        return __generator(this, function (_a) {
+                            names.push(server.members.fetch(element.user_id).then(function (member) {
+                                return i + 1 + ". " + member.user.username + " - " + getUserScore(element.user_id, element.server_id) + "\n";
+                            }));
+                            return [2 /*return*/];
+                        });
+                    }); });
+                    return [4 /*yield*/, Promise.all(names).then(function (values) { return values.forEach(function (element) {
+                            list = list.concat(element);
+                        }); })];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/, list];
+            }
+        });
     });
-    return new Discord.MessageEmbed()
-        .setColor('#0099ff')
-        .setAuthor("Joel Hill", client.user.avatarURL())
-        .addFields({
-        name: 'Scoreboard', value: list
+}
+function getList(msg) {
+    return __awaiter(this, void 0, void 0, function () {
+        var list;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, getScoreboardString(msg.guild, 25)];
+                case 1:
+                    list = _a.sent();
+                    return [2 /*return*/, new Discord.MessageEmbed()
+                            .setColor('#0099ff')
+                            .setAuthor("Joel Hill", client.user.avatarURL())
+                            .addFields({
+                            name: 'Scoreboard', value: list
+                        })];
+            }
+        });
     });
 }
 function getUserScore(userId, serverId) {
@@ -315,11 +347,11 @@ function updateMessage(message, serverId) {
 }
 function handleCommand(msg) {
     return __awaiter(this, void 0, void 0, function () {
-        var contentArr, response, response, response;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var _a, _b, contentArr, response, response, response;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
                 case 0:
-                    if (!msg.content.startsWith(settings.prefix)) return [3 /*break*/, 6];
+                    if (!msg.content.startsWith(settings.prefix)) return [3 /*break*/, 8];
                     if (msg.content === settings.prefix + "help") {
                         msg.channel.send(help);
                         return [2 /*return*/];
@@ -332,36 +364,39 @@ function handleCommand(msg) {
                         msg.channel.send(getScore(msg));
                         return [2 /*return*/];
                     }
-                    if (msg.content === settings.prefix + "scoreboard") {
-                        msg.channel.send(getList(msg));
-                        return [2 /*return*/];
-                    }
+                    if (!(msg.content === settings.prefix + "scoreboard")) return [3 /*break*/, 2];
+                    _b = (_a = msg.channel).send;
+                    return [4 /*yield*/, getList(msg)];
+                case 1:
+                    _b.apply(_a, [_c.sent()]);
+                    return [2 /*return*/];
+                case 2:
                     if (!msg.member.hasPermission("ADMINISTRATOR")) {
                         msg.reply("You are not an admin!");
                         return [2 /*return*/];
                     }
                     contentArr = msg.content.split(" ");
-                    if (!(contentArr[0] === settings.prefix + "channel")) return [3 /*break*/, 2];
+                    if (!(contentArr[0] === settings.prefix + "channel")) return [3 /*break*/, 4];
                     return [4 /*yield*/, addServer(contentArr[1], msg.guild.id)];
-                case 1:
-                    response = _a.sent();
-                    msg.reply(response);
-                    return [3 /*break*/, 6];
-                case 2:
-                    if (!(contentArr[0] === settings.prefix + "number")) return [3 /*break*/, 4];
-                    return [4 /*yield*/, updateNumber(parseInt(contentArr[1]), msg.guild.id)];
                 case 3:
-                    response = _a.sent();
+                    response = _c.sent();
                     msg.reply(response);
-                    return [3 /*break*/, 6];
+                    return [3 /*break*/, 8];
                 case 4:
-                    if (!(contentArr[0] === settings.prefix + "goal")) return [3 /*break*/, 6];
-                    return [4 /*yield*/, updateGoal(contentArr[1], msg.guild.id)];
+                    if (!(contentArr[0] === settings.prefix + "number")) return [3 /*break*/, 6];
+                    return [4 /*yield*/, updateNumber(parseInt(contentArr[1]), msg.guild.id)];
                 case 5:
-                    response = _a.sent();
+                    response = _c.sent();
                     msg.reply(response);
-                    _a.label = 6;
-                case 6: return [2 /*return*/];
+                    return [3 /*break*/, 8];
+                case 6:
+                    if (!(contentArr[0] === settings.prefix + "goal")) return [3 /*break*/, 8];
+                    return [4 /*yield*/, updateGoal(contentArr[1], msg.guild.id)];
+                case 7:
+                    response = _c.sent();
+                    msg.reply(response);
+                    _c.label = 8;
+                case 8: return [2 /*return*/];
             }
         });
     });

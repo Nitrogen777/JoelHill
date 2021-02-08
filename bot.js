@@ -105,20 +105,20 @@ function getInfo(serverId) {
     var info = serverDictionary[serverId];
     return "```\nCounting channel: <#" + info.channel + ">\nCurrent Number: " + info.last_number + "\nGoal: " + info.goal + "\nNumbers left: " + (info.goal - info.last_number) + "```";
 }
-function getScore(msg) {
-    if (!userExists(msg.member.id, msg.guild.id)) {
-        return "You didn't count yet!";
+function getScore(msg, user) {
+    if (!userExists(user.id, msg.guild.id)) {
+        return "Can't find user! Perhaps they haven't counted yet?";
     }
     return new Discord.MessageEmbed()
         .setColor('#0099ff')
-        .setTitle("Score for " + msg.member.user.username)
+        .setTitle("Score for " + user.username)
         .setAuthor("Joel Hill", client.user.avatarURL())
-        .setThumbnail(msg.member.user.avatarURL())
-        .setDescription(getUserScore(msg.member.id, msg.guild.id))
+        .setThumbnail(user.avatarURL())
+        .setDescription(getUserScore(user.id, msg.guild.id))
         .addFields({
         name: 'User Rank',
         value: getServerScoreboard(msg.guild.id)
-            .findIndex(function (element) { return element.user_id === msg.member.id; }) + 1
+            .findIndex(function (element) { return element.user_id === user.id; }) + 1
     });
 }
 function getScoreboardString(server, amount) {
@@ -360,8 +360,13 @@ function handleCommand(msg) {
                         msg.channel.send(getInfo(msg.guild.id));
                         return [2 /*return*/];
                     }
-                    if (msg.content === settings.prefix + "level") {
-                        msg.channel.send(getScore(msg));
+                    if (msg.content.startsWith(settings.prefix + "level")) {
+                        if (msg.mentions.users.size > 0) {
+                            msg.channel.send(getScore(msg, msg.mentions.users.first(1)[0]));
+                        }
+                        else {
+                            msg.channel.send(getScore(msg, msg.member.user));
+                        }
                         return [2 /*return*/];
                     }
                     if (!(msg.content === settings.prefix + "scoreboard")) return [3 /*break*/, 2];
@@ -391,7 +396,7 @@ function handleCommand(msg) {
                     return [3 /*break*/, 8];
                 case 6:
                     if (!(contentArr[0] === settings.prefix + "goal")) return [3 /*break*/, 8];
-                    return [4 /*yield*/, updateGoal(contentArr[1], msg.guild.id)];
+                    return [4 /*yield*/, updateGoal(+contentArr[1], msg.guild.id)];
                 case 7:
                     response = _c.sent();
                     msg.reply(response);

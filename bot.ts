@@ -3,6 +3,7 @@ import pm2 = require('@pm2/io')
 const client = new Discord.Client();
 import fs = require('fs');
 import mariadb = require("mariadb");
+import { ConsoleLogger } from '@opencensus/core/build/src/common/console-logger';
 const settings = JSON.parse(fs.readFileSync('settings.json').toString())
 const token = settings.token
 const pool = mariadb.createPool({
@@ -38,10 +39,10 @@ var serverDictionary: {
 
 var userScores: { user_id: string, server_id: string, score: number }[] = []
 
-function serverExists(serverId) {
+function serverExists(serverId: string) {
     return serverId in serverDictionary;
 }
-function userExists(userId, serverId) {
+function userExists(userId: string, serverId: string) {
     return userScores.filter(element => element.user_id === userId)
         .filter(element => element.server_id === serverId).length > 0
 }
@@ -60,7 +61,7 @@ async function getUserScores() {
     return content;
 }
 
-function getInfo(serverId) {
+function getInfo(serverId: string) {
     if (!serverExists(serverId)) {
         return `Set the server's channel first!`
     }
@@ -72,26 +73,26 @@ Goal: ${info.goal}
 Numbers left: ${info.goal - info.last_number}\`\`\``
 }
 
-function getScore(msg) {
-    if (!userExists(msg.member.id, msg.guild.id)) {
-        return "You didn't count yet!"
+function getScore(msg: Discord.Message, user: Discord.User) {
+    if (!userExists(user.id, msg.guild.id)) {
+        return "Can't find user! Perhaps they haven't counted yet?"
     }
     return new Discord.MessageEmbed()
         .setColor('#0099ff')
-        .setTitle(`Score for ${msg.member.user.username}`)
+        .setTitle(`Score for ${user.username}`)
         .setAuthor("Joel Hill", client.user.avatarURL())
-        .setThumbnail(msg.member.user.avatarURL())
-        .setDescription(getUserScore(msg.member.id, msg.guild.id))
+        .setThumbnail(user.avatarURL())
+        .setDescription(getUserScore(user.id, msg.guild.id))
         .addFields({
             name: 'User Rank', value: getServerScoreboard(msg.guild.id)
-                .findIndex(element => element.user_id === msg.member.id) + 1
+                .findIndex(element => element.user_id === user.id) + 1
         })
 }
 async function getScoreboardString(server: Discord.Guild, amount: number) {
     let list = ""
     let names = []
     getServerScoreboard(server.id).slice(0, amount).forEach(async (element, i) => {
-        names.push(server.members.fetch(element.user_id).then(member => 
+        names.push(server.members.fetch(element.user_id).then(member =>
             `${i + 1}. ${member.user.username} - ${getUserScore(element.user_id, element.server_id)}\n`))
     })
     await Promise.all(names).then(values => values.forEach((element) => {
@@ -110,17 +111,17 @@ async function getList(msg: Discord.Message) {
         })
 }
 
-function getUserScore(userId, serverId) {
+function getUserScore(userId: string, serverId: string) {
     return userScores.filter(element => element.user_id === userId)
         .filter(element => element.server_id === serverId)[0].score
 }
 
-function getServerScoreboard(serverId) {
+function getServerScoreboard(serverId: string) {
     return userScores.filter((element => element.server_id === serverId))
         .sort((a, b) => (a.score < b.score) ? 1 : -1)
 }
 
-function setUserScore(userId, serverId, score) {
+function setUserScore(userId: string, serverId: string, score: number) {
     userScores.forEach(element => {
         if (element.user_id === userId && element.server_id === serverId) {
             element.score = score
@@ -128,7 +129,7 @@ function setUserScore(userId, serverId, score) {
     })
 }
 
-async function addServer(channelId, serverId) {
+async function addServer(channelId: string, serverId: string) {
     let channel;
     try {
         channel = await client.channels.fetch(channelId)
@@ -155,7 +156,7 @@ async function addServer(channelId, serverId) {
     return `Set server's counting channel to ${channel.toString()}`;
 }
 
-async function incrementUser(userId, serverId, number) {
+async function incrementUser(userId: string, serverId: string, number: number) {
     let conn = await pool.getConnection();
     if (userExists(userId, serverId)) {
         let new_score = getUserScore(userId, serverId) + number
@@ -170,7 +171,7 @@ async function incrementUser(userId, serverId, number) {
     }
 }
 
-async function updateNumber(number, serverId) {
+async function updateNumber(number: number, serverId: string) {
     if (!isNumber(number.toString())) {
         return "Not a number"
     }
@@ -185,7 +186,7 @@ async function updateNumber(number, serverId) {
     return `Set the server's counting channel first!`;
 }
 
-async function updateGoal(goal, serverId) {
+async function updateGoal(goal: number, serverId: string) {
     if (!isNumber(goal.toString())) {
         return "Not a number"
     }
@@ -200,7 +201,7 @@ async function updateGoal(goal, serverId) {
     return `Set the server's counting channel first!`;
 }
 
-async function updateSender(sender, serverId) {
+async function updateSender(sender: string, serverId: string) {
     let conn = await pool.getConnection();
     if (serverExists(serverId)) {
         await conn.query("UPDATE servers SET last_sender = ? WHERE id = ?", [sender, serverId]);
@@ -210,7 +211,7 @@ async function updateSender(sender, serverId) {
     conn.end()
 }
 
-async function updateMessage(message, serverId) {
+async function updateMessage(message: string, serverId: string) {
     let conn = await pool.getConnection();
     if (serverExists(serverId)) {
         await conn.query("UPDATE servers SET last_message = ? WHERE id = ?", [message, serverId]);
@@ -220,7 +221,7 @@ async function updateMessage(message, serverId) {
     conn.end()
 }
 
-async function handleCommand(msg) {
+async function handleCommand(msg: Discord.Message) {
     if (msg.content.startsWith(settings.prefix)) {
         if (msg.content === `${settings.prefix}help`) {
             msg.channel.send(help)
@@ -230,8 +231,12 @@ async function handleCommand(msg) {
             msg.channel.send(getInfo(msg.guild.id))
             return
         }
-        if (msg.content === `${settings.prefix}level`) {
-            msg.channel.send(getScore(msg))
+        if (msg.content.startsWith(`${settings.prefix}level`)) {
+            if (msg.mentions.users.size > 0) {
+                msg.channel.send(getScore(msg, msg.mentions.users.first(1)[0]))
+            } else {
+                msg.channel.send(getScore(msg, msg.member.user))
+            }
             return
         }
         if (msg.content === `${settings.prefix}scoreboard`) {
@@ -250,7 +255,7 @@ async function handleCommand(msg) {
             let response = await updateNumber(parseInt(contentArr[1]), msg.guild.id)
             msg.reply(response)
         } else if (contentArr[0] === `${settings.prefix}goal`) {
-            let response = await updateGoal(contentArr[1], msg.guild.id)
+            let response = await updateGoal(+contentArr[1], msg.guild.id)
             msg.reply(response)
         }
     }
